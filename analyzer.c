@@ -41,7 +41,7 @@ void *analyzerThread(void *arg){
 
         sem_post(&commonData1.empty);                                             // relase
             
-        printf("%s\n", buf);
+        // printf("%s\n", buf);
 
         int bufLen = 0;
 
@@ -66,7 +66,8 @@ void *analyzerThread(void *arg){
         }
 
         if (!first) {                                                 // if previous struct exists, calculate usage
-
+            memset(buf, 0, DATASIZE);
+            bufLen = 0;
             for (int line = 0; line < bufLines; line++) {
                 
                 // PrevIdle = previdle + previowait
@@ -97,11 +98,21 @@ void *analyzerThread(void *arg){
                 // CPU_Percentage = (totald - idled)/totald
                 float cpuUsage = (float)(currTime - currIdle)*100/(float)currTime; 
 
-                printf("%s %f%%\n", current[line].cpuName, cpuUsage);
-
+                // printf("%s %f%%\n", current[line].cpuName, cpuUsage);
+                char lineBuf [32];
+                bufLen += snprintf(buf + bufLen, 32, "%s %f%%\n", current[line].cpuName, cpuUsage);
+                // printf("%s", lineBuf);
             }
-        }
+            sem_wait(&commonData2.empty);                                              // lock
 
+            if (memcpy(commonData2.buf, buf, DATASIZE) == NULL){          // copy to commonData2, critical!
+                perror("memcpy error\n");
+                exit(EXIT_FAILURE);
+            }
+            commonData2.bufLines = bufLines;
+
+            sem_post(&commonData2.full);                                             // relase
+        }
 
         memcpy(previous, current, sizeof(current));
         first = false;

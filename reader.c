@@ -22,7 +22,7 @@ void *readerThread(void *arg){
         int bufLen = 0;
         int bufLines = 0;
         
-        printf("Reading...\n");
+        // printf("Reading...\n");
         
         FILE* statFile = fopen("/proc/stat", "r");
         if (statFile == NULL) 
