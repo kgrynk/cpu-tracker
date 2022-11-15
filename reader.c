@@ -19,7 +19,7 @@ void *readerThread(void *arg){
     for (int measure = 0; ; measure++) 
     {
         char buf[DATASIZE];
-        size_t bufLen = 0;
+        int bufLen = 0;
         int bufLines = 0;
         
         printf("Reading...\n");
@@ -34,26 +34,26 @@ void *readerThread(void *arg){
         for (bufLines = 0; bufLen < DATASIZE; bufLines++) 
         {
             char line[MAX_LINE_SIZE] = {0};
-            size_t lineSize = 0;
+            int lineSize = 0;
             char c = 0;
             
-            do
+            do                                                                    // read the whole line char after char
             {
                 c = fgetc(statFile);
-                if(c == EOF)
+                if(c == EOF)                                                      // we don't read the whole file, EOF unexpected
                 {
                     perror("fgets error\n");
                     exit(EXIT_FAILURE);
                 }
                 line[lineSize] = c;
                 lineSize++;
-            } 
-            while(c != '\n' && lineSize < MAX_LINE_SIZE);                 // && c != EOF);
+            }
+            while(c != '\n' && lineSize < MAX_LINE_SIZE);
 
 
-            if(strncmp(line, "cpu", 3) == 0)                    // check if line starts from "cpu" string
+            if(strncmp(line, "cpu", 3) == 0)                            // check if line starts from "cpu" string
             {
-                if (memcpy(buf + bufLen, line, lineSize) == NULL){
+                if (memcpy(buf + bufLen, line, lineSize) == NULL){   // copy to local buf
                     perror("memcpy error\n");
                     exit(EXIT_FAILURE);
                 }
@@ -66,17 +66,16 @@ void *readerThread(void *arg){
         }
 
 
-        // lock
-        sem_wait(&commonData1.empty);
+        sem_wait(&commonData1.empty);                                       // lock
 
-        if (memcpy(commonData1.buf, buf, bufLen) == NULL){          // critical!
+        if (memcpy(commonData1.buf, buf, bufLen) == NULL){          // copy to commonData1, critical!
             perror("memcpy error\n");
             exit(EXIT_FAILURE);
         }
         commonData1.bufLines = bufLines;
     
-        // relase
-        sem_post(&commonData1.full);
+        sem_post(&commonData1.full);                                        // relase
+
 
         if (fclose(statFile) != EXIT_SUCCESS){
             perror("fclose error\n");
@@ -86,7 +85,7 @@ void *readerThread(void *arg){
         sleep(1);
     }
 
-    sem_wait(&commonData1.empty);
+    // sem_wait(&commonData1.empty);
 
     return EXIT_SUCCESS;
 }
