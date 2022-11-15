@@ -39,7 +39,6 @@ int main(){
         if (pthread_join(pthread[i], &exitStatusPtr) !=  EXIT_SUCCESS || exitStatus != EXIT_SUCCESS){
             exit(EXIT_FAILURE);
         }
-        // printf("Exit: %d\n", exitStatus);
     }
 
     printf("It works!\n");

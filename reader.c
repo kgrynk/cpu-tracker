@@ -13,16 +13,15 @@
 extern CommonData commonData1;
 
 
-void *readerThread(void *arg){
+void *readerThread(void){
     
 
-    for (int measure = 0; ; measure++) 
+    while (true) 
     {
         char buf[DATASIZE];
         int bufLen = 0;
         int bufLines = 0;
         
-        // printf("Reading...\n");
         
         FILE* statFile = fopen("/proc/stat", "r");
         if (statFile == NULL) 
@@ -85,7 +84,6 @@ void *readerThread(void *arg){
         sleep(1);
     }
 
-    // sem_wait(&commonData1.empty);
 
     return EXIT_SUCCESS;
 }

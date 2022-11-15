@@ -9,20 +9,18 @@
 extern CommonData commonData2;
 
 
-void *printerThread(void *arg){
+void *printerThread(void){
     while (true) 
     {
         printf("Printing...\n");
         char buf[DATASIZE];
-        int bufLines = 0;
 
         sem_wait(&commonData2.full);                                              // lock
 
-        if (memcpy(buf, commonData2.buf, DATASIZE) == NULL){          // copy from commonData1, critical!
+        if (memcpy(buf, commonData2.buf, DATASIZE) == NULL){              // copy from commonData1, critical!
             perror("memcpy error\n");
             exit(EXIT_FAILURE);
         }
-        bufLines = commonData2.bufLines;
 
         sem_post(&commonData2.empty);                                             // relase
             
