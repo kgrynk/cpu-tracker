@@ -3,3 +3,5 @@ CMakeCache.txt
 Makefile
 cmake_install.cmake
 cpu-tracker
+.gdb_history
+.cache/
