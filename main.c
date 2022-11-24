@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <signal.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "reader.h"
@@ -14,7 +17,25 @@
 CommonData commonData1;
 CommonData commonData2;
 
+volatile sig_atomic_t exitRequested = 0;
+
+void signal_handler(int signum) {
+    exitRequested = 1;
+    sem_post(&commonData1.empty);                                           // relase all locks
+    sem_post(&commonData1.full);
+    sem_post(&commonData2.empty);
+    sem_post(&commonData2.full);
+}
+
 int main(){
+
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = signal_handler;                                         // install signal handler
+    sigaction(SIGINT, &action, NULL);                           // handle INT
+    sigaction(SIGTERM, &action, NULL);                          // handle TERM
+    
+    
     pthread_t pthread[THREADS_COUNT];
     
     sem_init(&commonData1.empty, 0, 1);
@@ -34,14 +55,14 @@ int main(){
     }
 
     for (int i = 0; i < THREADS_COUNT; i++) {
-        int exitStatus;
-        void* exitStatusPtr = &exitStatus;
-        if (pthread_join(pthread[i], &exitStatusPtr) !=  EXIT_SUCCESS || exitStatus != EXIT_SUCCESS){
-            exit(EXIT_FAILURE);
-        }
+        pthread_join(pthread[i], NULL);
+    }
+    
+    if(!exitRequested){
+        return EXIT_FAILURE;
     }
 
-    printf("It works!\n");
+    // perror("\nIt works!");
 
     return EXIT_SUCCESS;
 }

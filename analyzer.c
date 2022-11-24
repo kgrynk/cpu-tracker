@@ -4,12 +4,15 @@
 #include <stdlib.h>
 #include <semaphore.h>
 #include <string.h>
+#include <signal.h>
 
 #include "common.h"
 
 
 extern CommonData commonData1;
 extern CommonData commonData2;
+extern volatile sig_atomic_t exitRequested;
+
 
 typedef struct 
 {
@@ -17,21 +20,25 @@ typedef struct
     int user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
 } CpuData;
 
-
 void *analyzerThread(void){
 
     CpuData previous[MAX_CPUS];
     CpuData current[MAX_CPUS];
     bool first = true;
 
-    while (true) 
+    while (!exitRequested) 
     {
-        printf("Analyzing...\n");
-        
         char buf[DATASIZE];
         int bufLines = 0;
 
+        // printf("Analyzer waiting...\n");
+        // fflush(stdout);
+
         sem_wait(&commonData1.full);                                        // lock
+
+        if (exitRequested) {
+            return EXIT_SUCCESS;
+        }
 
         if (memcpy(buf, commonData1.buf, DATASIZE) == NULL){        // copy from commonData1, critical!
             perror("memcpy error\n");
@@ -40,7 +47,9 @@ void *analyzerThread(void){
         bufLines = commonData1.bufLines;
 
         sem_post(&commonData1.empty);                                       // relase
-            
+
+        // printf("...analyzer continues\n");
+        // fflush(stdout);
 
         int bufLen = 0;
 
@@ -101,6 +110,10 @@ void *analyzerThread(void){
             }
 
             sem_wait(&commonData2.empty);                                               // lock
+    
+            if (exitRequested) {
+                return EXIT_SUCCESS;
+            }        
 
             if (memcpy(commonData2.buf, buf, DATASIZE) == NULL){                // copy to commonData2, critical!
                 perror("memcpy error\n");
@@ -114,5 +127,6 @@ void *analyzerThread(void){
         memcpy(previous, current, sizeof(current));
         first = false;
     }
+
     return EXIT_SUCCESS;
 }

@@ -7,17 +7,19 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #include "common.h"
 
 extern CommonData commonData1;
+extern volatile sig_atomic_t exitRequested;
 
 
 void *readerThread(void){
-    
 
-    while (true) 
+    while (!exitRequested) 
     {
+
         char buf[DATASIZE];
         int bufLen = 0;
         int bufLines = 0;
@@ -64,16 +66,30 @@ void *readerThread(void){
             }
         }
 
+        // printf("Reader waiting...\n");
+        // fflush(stdout);
 
         sem_wait(&commonData1.empty);                                       // lock
+        
 
-        if (memcpy(commonData1.buf, buf, bufLen) == NULL){          // copy to commonData1, critical!
-            perror("memcpy error\n");
-            exit(EXIT_FAILURE);
+        if (!exitRequested) {                                                       // close the statFile before exit
+        
+            if (memcpy(commonData1.buf, buf, bufLen) == NULL){          // copy to commonData1, critical!
+                perror("memcpy error\n");
+                exit(EXIT_FAILURE);
+            }
+            commonData1.bufLines = bufLines;
+        
+            sem_post(&commonData1.full);                                        // relase
+            
+            // printf("...reader sleeping...\n");
+            // fflush(stdout);
+            
+            sleep(1);
+            
+            // printf("...reader continues\n");
+            // fflush(stdout);
         }
-        commonData1.bufLines = bufLines;
-    
-        sem_post(&commonData1.full);                                        // relase
 
 
         if (fclose(statFile) != EXIT_SUCCESS){
@@ -81,9 +97,7 @@ void *readerThread(void){
             exit(EXIT_FAILURE);
         }
 
-        sleep(1);
     }
-
 
     return EXIT_SUCCESS;
 }
